@@ -49,6 +49,8 @@ def run_agent(task: str, budget: BudgetEnforcer, verbose: bool = True) -> dict:
     llm = OllamaClient(budget)
     detector = LoopDetector()
     messages: list[dict] = [{"role": "user", "content": f"TASK: {task}"}]
+    any_tool_success = False
+    evidence_warning_given = False
 
     def log(msg: str) -> None:
         if verbose:
@@ -86,6 +88,29 @@ def run_agent(task: str, budget: BudgetEnforcer, verbose: bool = True) -> dict:
             log(f"           progress_check: {progress_check}")
 
             # --- FINISH? ---
+            # Reject an evidence-free final answer once: the model may not
+            # "answer" a research task without having used a single tool.
+            if final_answer and not any_tool_success and not evidence_warning_given:
+                evidence_warning_given = True
+                reason = ("you produced a final answer without gathering any "
+                          "evidence via tools")
+                log(f"  [EVIDENCE-FREE ANSWER REJECTED] {reason} -> forcing replan")
+                messages.append({"role": "assistant", "content": json.dumps(decision)})
+                messages.append({
+                    "role": "user",
+                    "content": "ANSWER REJECTED: you have not used any tool yet, so "
+                               "this answer is not grounded in evidence. Use tools to "
+                               "gather real data first. If the full task cannot fit in "
+                               "the remaining budget, gather what you can and then give "
+                               "an honest partial answer.",
+                })
+                state.steps.append(StepRecord(
+                    step=step_no, thought=thought, action=None,
+                    observation="(blocked: evidence-free final answer)",
+                    progress="no_progress", replanned=True, replan_reason=reason,
+                ))
+                continue
+
             if final_answer:
                 state.best_known_answer = str(final_answer)
                 state.status = "completed"
@@ -145,6 +170,9 @@ def run_agent(task: str, budget: BudgetEnforcer, verbose: bool = True) -> dict:
                 progress="no_progress" if no_progress else "progress",
             )
             messages.append({"role": "assistant", "content": json.dumps(decision)})
+
+            if result_success:
+                any_tool_success = True
 
             if no_progress:
                 reason = f"the {tool_name} call did not produce useful output: {obs[:150]}"

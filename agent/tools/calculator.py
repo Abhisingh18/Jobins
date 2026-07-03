@@ -51,8 +51,8 @@ def _safe_eval(node: ast.AST) -> float:
 class CalculatorTool(Tool):
     name = "calculator"
     description = ("Evaluate an arithmetic expression exactly. Supports + - * / // % ** "
-                   "parentheses, sqrt/log/exp/trig/round, and constants pi, e. "
-                   "Example: '1000 * (1 + 0.05) ** 10'")
+                   "(^ also works as power), parentheses, sqrt/log/exp/trig/round, and "
+                   "constants pi, e. Example: '1000 * (1 + 0.05) ** 10'")
     args_hint = '{"expression": "<math expression>"}'
     timeout_seconds = 5
 
@@ -60,6 +60,10 @@ class CalculatorTool(Tool):
         if not expression or not expression.strip():
             return ToolResult(success=False, error="expression must be non-empty",
                               error_type="INPUT_ERROR")
+        # Calculator convention: ^ means power. Rewrite BEFORE parsing — mapping
+        # ast.BitXor to pow instead would inherit ^'s XOR precedence (looser
+        # than *), silently turning 1000*(1.05)^10 into (1000*1.05)**10.
+        expression = expression.replace("^", "**")
         try:
             tree = ast.parse(expression, mode="eval")
             value = _safe_eval(tree)

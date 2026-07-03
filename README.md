@@ -101,15 +101,40 @@ instead of exploring.
 
 ## Failure Modes
 
-**Observed during testing:** on task 4 (adversarial "exact grains of sand"),
-the model occasionally emitted a syntactically valid JSON object whose
-`action` field was a *string* (`"action": "web_search"`) instead of the
-required object — the loop caught it, replied with a corrective message, and
-recovered, but that correction consumed one full LLM call from the budget of
-ten. Small local models pay a real budget tax for schema discipline. A second
-minor mode: DuckDuckGo occasionally rate-limits, which surfaces as a
-`NETWORK_ERROR` tool failure and (correctly) triggers a replan, but wastes a
-step on infrastructure noise rather than reasoning error.
+Three concrete modes observed during testing:
+
+1. **`^` as exponentiation — a two-stage failure.** The model persistently
+   wrote `1000 * (1 + 0.05)^10`. Python parses `^` as XOR, so the safe-AST
+   calculator first rejected it outright, and the agent burned three replans
+   (and eventually the whole cost budget) searching the web for "compound
+   interest formula without binop" instead of fixing the syntax. My first fix
+   — mapping the XOR AST node to `pow` — introduced a subtler bug: `^`
+   inherits XOR's precedence, which binds *looser* than `*`, so the
+   expression silently evaluated as `(1000 * 1.05) ** 10 = 1.63e+30` and the
+   agent reported "$1.63 billion" while itself noting it "seems implausible."
+   Final fix: textually rewrite `^` to `**` *before* parsing, which restores
+   correct power precedence. Verified: the same expression now returns
+   1628.89.
+
+2. **Evidence-free bail-out.** On the budget-drain task (15 countries), the
+   model once returned a final answer full of `null`s at step 1 without
+   running a single search — the "partial answer beats no answer" prompt rule
+   backfired. Fix shipped: the orchestrator rejects a final answer produced
+   before any successful tool call (once), forcing the agent to gather real
+   evidence first.
+
+3. **Off-by-one reasoning survives correct tooling.** On the Fibonacci task
+   the agent recovered well from a crashing recursive attempt (replan →
+   iterative code), but its iterative loop computed F26 (121393) instead of
+   F25 (75025) and no tool can catch a semantically wrong but syntactically
+   fine program. Budget enforcement bounds the cost of such errors; it cannot
+   detect them.
+
+Design note on the cost cap: token counts are only known *after* a call
+returns, so the final LLM call can overshoot $0.20 slightly (observed:
+$0.2365). Execution still halts immediately and the overshoot is visible in
+the ledger — pre-metering would require a tokenizer-accurate cost oracle
+before each call.
 
 ## Future Work
 

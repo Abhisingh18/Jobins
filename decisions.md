@@ -25,6 +25,13 @@
   failure modes (timeouts, rate limits) that the tool error taxonomy and
   replanning path must handle.
 
+- I considered **mapping the `^` (XOR) AST node to `pow` in the calculator**
+  but chose **textually rewriting `^` to `**` before parsing** because the
+  AST mapping keeps XOR's precedence (looser than `*`) and silently computed
+  `1000*(1.05)^10` as `(1000*1.05)**10` — a wrong-answer bug observed live in
+  testing — while the textual rewrite gives `^` the power precedence every
+  real calculator uses.
+
 - I considered **killing execution with `sys.exit()` when the budget is hit**
   but chose **raising a typed `BudgetExceededError` caught only at the
   orchestrator level** because the agent must report exactly what it
