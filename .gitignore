@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
 .env
+.venv/
 traces/*.log
 traces/*.err
