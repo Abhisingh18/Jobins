@@ -204,7 +204,10 @@ export default function Page() {
       <div className="card">
         <h3>Launch a run</h3>
         <div className="launch">
+          {/* suppressHydrationWarning: browser extensions inject fdprocessedid
+              into form controls before React hydrates, causing false mismatches */}
           <input
+            suppressHydrationWarning
             placeholder='e.g. "What is the population of Japan? Use web search."'
             value={task}
             onChange={(e) => setTask(e.target.value)}
@@ -212,6 +215,7 @@ export default function Page() {
             disabled={running}
           />
           <button
+            suppressHydrationWarning
             className="btn primary"
             onClick={() => launch("task")}
             disabled={running || !task.trim()}
@@ -219,6 +223,7 @@ export default function Page() {
             Run task
           </button>
           <button
+            suppressHydrationWarning
             className="btn ghost"
             onClick={() => launch("suite")}
             disabled={running}
