@@ -19,7 +19,9 @@ services:
       - OLLAMA_HOST=http://ollama:11434
     volumes:
       - ollama-models:/root/.ollama
-    entrypoint: ["ollama", "pull", "llama3.2:3b"]
+    # model is configurable via OLLAMA_MODEL in .env (default: llama3.2:3b);
+    # on low-RAM machines set OLLAMA_MODEL=llama3.2:1b for a faster CPU run
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-llama3.2:3b}"]
 
   agent:
     build: .
