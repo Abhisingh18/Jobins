@@ -146,6 +146,21 @@ semantic action-similarity detection (embed the last N queries with a tiny
 local embedding model and flag cosine-similar repeats) so paraphrased loops
 trigger the same hard replan path as identical ones.
 
+## Bonus: live tracking dashboard
+
+A small Flask + Next.js control center for watching the agent work
+(`dashboard/`). It shows Ollama/Docker/agent-process status, per-run budget
+meters (calls + cost), replanning counts, expandable step-by-step traces from
+`traces/*.json`, and a live log console; runs can be launched from the UI
+(single task or the full suite — one at a time).
+
+```bash
+# terminal 1 — API (port 8788)
+python dashboard/api/dashboard_api.py
+# terminal 2 — UI (port 3000)
+cd dashboard/web && npm install && npm run dev
+```
+
 ## Repository layout
 
 ```

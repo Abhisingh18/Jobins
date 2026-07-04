@@ -2,5 +2,7 @@ __pycache__/
 *.pyc
 .env
 .venv/
+dashboard/web/node_modules/
+dashboard/web/.next/
 traces/*.log
 traces/*.err
